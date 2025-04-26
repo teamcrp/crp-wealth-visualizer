@@ -68,6 +68,7 @@ export const generatePDF = (data: SWPData) => {
   // Track positions with local variables
   let currentY = 50;
   
+  // Store the return value from autoTable
   const inputParamsTableOutput = autoTable(doc, {
     startY: currentY,
     head: [['Parameter', 'Value']],
@@ -77,7 +78,10 @@ export const generatePDF = (data: SWPData) => {
   });
   
   // Update currentY based on where the table ended
-  currentY = inputParamsTableOutput.finalY || currentY + 40;
+  // Use the tableEndsY property which is a more reliable way to get the final Y position
+  currentY = (inputParamsTableOutput && typeof inputParamsTableOutput.previousPageHeight !== 'undefined') 
+    ? (inputParamsTableOutput.finalY ?? currentY + 40) 
+    : currentY + 40;
 
   // Results summary section
   doc.setFontSize(14);
@@ -104,7 +108,9 @@ export const generatePDF = (data: SWPData) => {
   });
   
   // Update currentY for the next section
-  currentY = resultsSummaryTableOutput.finalY || currentY + 60;
+  currentY = (resultsSummaryTableOutput && typeof resultsSummaryTableOutput.previousPageHeight !== 'undefined') 
+    ? (resultsSummaryTableOutput.finalY ?? currentY + 60) 
+    : currentY + 60;
 
   // Yearly data section
   doc.setFontSize(14);
@@ -138,7 +144,9 @@ export const generatePDF = (data: SWPData) => {
   });
   
   // Update currentY for the notes section
-  currentY = yearlyDataTableOutput.finalY || currentY + 100;
+  currentY = (yearlyDataTableOutput && typeof yearlyDataTableOutput.previousPageHeight !== 'undefined')
+    ? (yearlyDataTableOutput.finalY ?? currentY + 100)
+    : currentY + 100;
   
   // Notes section
   doc.setFontSize(12);
