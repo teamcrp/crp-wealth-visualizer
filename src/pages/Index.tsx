@@ -22,6 +22,7 @@ const Index = () => {
   const [expectedReturn, setExpectedReturn] = useState(8.0); // 8% annual return
   const [investmentDuration, setInvestmentDuration] = useState(20); // 20 years
   const [inflationRate, setInflationRate] = useState(5.0); // 5% inflation
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   // Calculated results
   const [results, setResults] = useState(calculateSWP(
@@ -79,9 +80,18 @@ const Index = () => {
     }
   };
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
+    if (isGeneratingPDF) return;
+    
     try {
-      generatePDF(results);
+      setIsGeneratingPDF(true);
+      toast({
+        title: "Generating PDF",
+        description: "Please wait while we prepare your PDF...",
+      });
+      
+      await generatePDF(results);
+      
       toast({
         title: "PDF Generated",
         description: "Your SWP results have been downloaded as a PDF.",
@@ -93,6 +103,8 @@ const Index = () => {
         description: "There was a problem creating your PDF. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 

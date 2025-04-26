@@ -1,6 +1,7 @@
+
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { generateChartImage } from './chartRenderer';
 
 interface YearlyData {
   year: number;
@@ -28,7 +29,7 @@ interface SWPData {
   };
 }
 
-export const generatePDF = (data: SWPData) => {
+export const generatePDF = async (data: SWPData) => {
   // Create a new PDF document
   const doc = new jsPDF();
   const formatRupee = (value: number): string => {
@@ -111,39 +112,18 @@ export const generatePDF = (data: SWPData) => {
   doc.setFontSize(14);
   doc.text('Investment Balance Trend', 20, currentY + 15);
 
-  // Create canvas element for chart rendering
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-    const width = 550;
-    const height = 300;
-    canvas.width = width;
-    canvas.height = height;
-
-    // Render the chart using Recharts
-    const AreaChartComponent = (
-      <AreaChart
-        width={width}
-        height={height}
-        data={data.yearlyData}
-        margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-      >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="year" />
-        <YAxis />
-        <Area 
-          type="monotone" 
-          dataKey="balance" 
-          stroke="#2c7a7b" 
-          fill="#2c7a7b" 
-          fillOpacity={0.3}
-        />
-      </AreaChart>
-    );
-
-    // Add the chart image to PDF
-    doc.addImage(canvas.toDataURL(), 'PNG', 20, currentY + 25, 170, 100);
-    currentY += 140;
+  try {
+    // Generate chart image
+    const chartImage = await generateChartImage(data.yearlyData);
+    if (chartImage) {
+      doc.addImage(chartImage, 'PNG', 20, currentY + 25, 170, 100);
+      currentY += 140;
+    } else {
+      currentY += 20; // Add space even if chart fails
+    }
+  } catch (error) {
+    console.error('Failed to add chart to PDF:', error);
+    currentY += 20;
   }
 
   // Yearly data section
