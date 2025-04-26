@@ -1,7 +1,5 @@
-
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { generateChartImage } from './chartRenderer';
 
 interface YearlyData {
   year: number;
@@ -30,7 +28,6 @@ interface SWPData {
 }
 
 export const generatePDF = async (data: SWPData) => {
-  // Create a new PDF document
   const doc = new jsPDF();
   const formatRupee = (value: number): string => {
     return new Intl.NumberFormat('en-IN', {
@@ -50,7 +47,7 @@ export const generatePDF = async (data: SWPData) => {
   
   doc.setFontSize(10);
   doc.text(`Generated on ${today}`, 105, 27, { align: 'center' });
-  doc.text('Powered by Team CRP (www.teamcrp.in)', 105, 32, { align: 'center' });
+  doc.text('Powered by Team CRP (https://teamcrp.in)', 105, 32, { align: 'center' });
 
   doc.setLineWidth(0.5);
   doc.line(20, 35, 190, 35);
@@ -59,10 +56,8 @@ export const generatePDF = async (data: SWPData) => {
   doc.setFontSize(14);
   doc.text('Input Parameters', 20, 45);
 
-  // Track positions with local variables
   let currentY = 50;
 
-  // Input parameters table
   const inputParams = [
     ['Initial Investment', formatRupee(data.initialInvestment)],
     ['Monthly Withdrawal', formatRupee(data.monthlyWithdrawal)],
@@ -71,8 +66,7 @@ export const generatePDF = async (data: SWPData) => {
     ['Inflation Rate', `${data.inflationRate.toFixed(1)}%`],
   ];
 
-  // Add input parameters table
-  const inputTable = autoTable(doc, {
+  autoTable(doc, {
     startY: currentY,
     head: [['Parameter', 'Value']],
     body: inputParams,
@@ -80,11 +74,11 @@ export const generatePDF = async (data: SWPData) => {
     headStyles: { fillColor: [26, 54, 93] },
   });
 
-  currentY = inputTable?.finalY ?? currentY + 40;
+  currentY = 120;
 
   // Results summary section
   doc.setFontSize(14);
-  doc.text('Results Summary', 20, currentY + 15);
+  doc.text('Results Summary', 20, currentY);
 
   const withdrawalRate = (data.monthlyWithdrawal * 12 / data.initialInvestment) * 100;
   const isWithdrawalRateSustainable = withdrawalRate <= data.expectedReturn;
@@ -98,37 +92,19 @@ export const generatePDF = async (data: SWPData) => {
     ['Investment Returns', formatRupee(data.finalSummary.returns)],
   ];
 
-  const summaryTable = autoTable(doc, {
-    startY: currentY + 20,
+  autoTable(doc, {
+    startY: currentY + 10,
     head: [['Metric', 'Value']],
     body: resultsSummary,
     theme: 'grid',
     headStyles: { fillColor: [44, 122, 123] },
   });
 
-  currentY = summaryTable?.finalY ?? currentY + 60;
-
-  // Add Balance Chart
-  doc.setFontSize(14);
-  doc.text('Investment Balance Trend', 20, currentY + 15);
-
-  try {
-    // Generate chart image
-    const chartImage = await generateChartImage(data.yearlyData);
-    if (chartImage) {
-      doc.addImage(chartImage, 'PNG', 20, currentY + 25, 170, 100);
-      currentY += 140;
-    } else {
-      currentY += 20; // Add space even if chart fails
-    }
-  } catch (error) {
-    console.error('Failed to add chart to PDF:', error);
-    currentY += 20;
-  }
+  currentY = 200;
 
   // Yearly data section
   doc.setFontSize(14);
-  doc.text('Yearly Projection', 20, currentY + 15);
+  doc.text('Yearly Projection', 20, currentY);
 
   const yearlyDataForTable = data.yearlyData.map(item => [
     item.year,
@@ -138,14 +114,13 @@ export const generatePDF = async (data: SWPData) => {
     formatRupee(item.inflationAdjustedWithdrawal)
   ]);
 
-  const yearlyTable = autoTable(doc, {
-    startY: currentY + 20,
+  autoTable(doc, {
+    startY: currentY + 10,
     head: [['Year', 'Balance', 'Annual Withdrawal', 'Cumulative', 'Inflation Adjusted']],
     body: yearlyDataForTable,
     theme: 'grid',
     headStyles: { fillColor: [26, 54, 93] },
     didDrawPage: (data) => {
-      // Footer on each page
       const pageCount = doc.getNumberOfPages();
       doc.setFontSize(8);
       doc.text(
@@ -157,11 +132,9 @@ export const generatePDF = async (data: SWPData) => {
     },
   });
 
-  currentY = yearlyTable?.finalY ?? currentY + 100;
-
   // Notes section
   doc.setFontSize(12);
-  doc.text('Notes:', 20, currentY + 15);
+  doc.text('Notes:', 20, doc.internal.pageSize.height - 50);
   
   doc.setFontSize(9);
   const notes = [
@@ -172,12 +145,11 @@ export const generatePDF = async (data: SWPData) => {
     '• Consult a financial advisor before making investment decisions based on this projection.'
   ];
   
-  let yPos = currentY + 20;
+  let yPos = doc.internal.pageSize.height - 45;
   notes.forEach(note => {
     doc.text(note, 20, yPos);
     yPos += 5;
   });
   
-  // Save the PDF
   doc.save('SWP_Calculator_Results.pdf');
 };

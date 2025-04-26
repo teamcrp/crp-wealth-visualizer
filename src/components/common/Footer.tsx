@@ -13,7 +13,7 @@ const Footer: FC = () => {
           </div>
           <div className="flex items-center space-x-4">
             <a 
-              href="https://www.teamcrp.in" 
+              href="https://teamcrp.in" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-sm hover:underline"
