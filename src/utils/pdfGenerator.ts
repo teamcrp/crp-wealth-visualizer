@@ -65,7 +65,7 @@ export const generatePDF = (data: SWPData) => {
     ['Inflation Rate', `${data.inflationRate.toFixed(1)}%`],
   ];
 
-  autoTable(doc, {
+  const inputParamsTable = autoTable(doc, {
     startY: 50,
     head: [['Parameter', 'Value']],
     body: inputParams,
@@ -75,7 +75,7 @@ export const generatePDF = (data: SWPData) => {
 
   // Results summary section
   doc.setFontSize(14);
-  doc.text('Results Summary', 20, doc.lastAutoTable.finalY + 15);
+  doc.text('Results Summary', 20, inputParamsTable.finalY + 15);
 
   const withdrawalRate = (data.monthlyWithdrawal * 12 / data.initialInvestment) * 100;
   const isWithdrawalRateSustainable = withdrawalRate <= data.expectedReturn;
@@ -89,8 +89,8 @@ export const generatePDF = (data: SWPData) => {
     ['Investment Returns', formatRupee(data.finalSummary.returns)],
   ];
 
-  autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 20,
+  const resultsSummaryTable = autoTable(doc, {
+    startY: inputParamsTable.finalY + 20,
     head: [['Metric', 'Value']],
     body: resultsSummary,
     theme: 'grid',
@@ -99,7 +99,7 @@ export const generatePDF = (data: SWPData) => {
 
   // Yearly data section
   doc.setFontSize(14);
-  doc.text('Yearly Projection', 20, doc.lastAutoTable.finalY + 15);
+  doc.text('Yearly Projection', 20, resultsSummaryTable.finalY + 15);
 
   const yearlyDataForTable = data.yearlyData.map(item => [
     item.year,
@@ -109,8 +109,8 @@ export const generatePDF = (data: SWPData) => {
     formatRupee(item.inflationAdjustedWithdrawal)
   ]);
 
-  autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 20,
+  const yearlyDataTable = autoTable(doc, {
+    startY: resultsSummaryTable.finalY + 20,
     head: [['Year', 'Balance', 'Annual Withdrawal', 'Cumulative', 'Inflation Adjusted']],
     body: yearlyDataForTable,
     theme: 'grid',
@@ -130,7 +130,7 @@ export const generatePDF = (data: SWPData) => {
   
   // Notes section
   doc.setFontSize(12);
-  doc.text('Notes:', 20, doc.lastAutoTable.finalY + 15);
+  doc.text('Notes:', 20, yearlyDataTable.finalY + 15);
   
   doc.setFontSize(9);
   const notes = [
@@ -141,7 +141,7 @@ export const generatePDF = (data: SWPData) => {
     '• Consult a financial advisor before making investment decisions based on this projection.'
   ];
   
-  let yPos = doc.lastAutoTable.finalY + 20;
+  let yPos = yearlyDataTable.finalY + 20;
   notes.forEach(note => {
     doc.text(note, 20, yPos);
     yPos += 5;
