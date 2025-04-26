@@ -1,6 +1,6 @@
-
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 interface YearlyData {
   year: number;
@@ -36,6 +36,7 @@ export const generatePDF = (data: SWPData) => {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0,
+      minimumFractionDigits: 0
     }).format(value);
   };
 
@@ -57,6 +58,10 @@ export const generatePDF = (data: SWPData) => {
   doc.setFontSize(14);
   doc.text('Input Parameters', 20, 45);
 
+  // Track positions with local variables
+  let currentY = 50;
+
+  // Input parameters table
   const inputParams = [
     ['Initial Investment', formatRupee(data.initialInvestment)],
     ['Monthly Withdrawal', formatRupee(data.monthlyWithdrawal)],
@@ -65,23 +70,16 @@ export const generatePDF = (data: SWPData) => {
     ['Inflation Rate', `${data.inflationRate.toFixed(1)}%`],
   ];
 
-  // Track positions with local variables
-  let currentY = 50;
-  
-  // Store the return value from autoTable
-  const inputParamsTableOutput = autoTable(doc, {
+  // Add input parameters table
+  const inputTable = autoTable(doc, {
     startY: currentY,
     head: [['Parameter', 'Value']],
     body: inputParams,
     theme: 'grid',
     headStyles: { fillColor: [26, 54, 93] },
   });
-  
-  // Update currentY based on where the table ended
-  // Use the tableEndsY property which is a more reliable way to get the final Y position
-  currentY = (inputParamsTableOutput && typeof inputParamsTableOutput.previousPageHeight !== 'undefined') 
-    ? (inputParamsTableOutput.finalY ?? currentY + 40) 
-    : currentY + 40;
+
+  currentY = inputTable?.finalY ?? currentY + 40;
 
   // Results summary section
   doc.setFontSize(14);
@@ -99,18 +97,54 @@ export const generatePDF = (data: SWPData) => {
     ['Investment Returns', formatRupee(data.finalSummary.returns)],
   ];
 
-  const resultsSummaryTableOutput = autoTable(doc, {
+  const summaryTable = autoTable(doc, {
     startY: currentY + 20,
     head: [['Metric', 'Value']],
     body: resultsSummary,
     theme: 'grid',
     headStyles: { fillColor: [44, 122, 123] },
   });
-  
-  // Update currentY for the next section
-  currentY = (resultsSummaryTableOutput && typeof resultsSummaryTableOutput.previousPageHeight !== 'undefined') 
-    ? (resultsSummaryTableOutput.finalY ?? currentY + 60) 
-    : currentY + 60;
+
+  currentY = summaryTable?.finalY ?? currentY + 60;
+
+  // Add Balance Chart
+  doc.setFontSize(14);
+  doc.text('Investment Balance Trend', 20, currentY + 15);
+
+  // Create canvas element for chart rendering
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    const width = 550;
+    const height = 300;
+    canvas.width = width;
+    canvas.height = height;
+
+    // Render the chart using Recharts
+    const AreaChartComponent = (
+      <AreaChart
+        width={width}
+        height={height}
+        data={data.yearlyData}
+        margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="year" />
+        <YAxis />
+        <Area 
+          type="monotone" 
+          dataKey="balance" 
+          stroke="#2c7a7b" 
+          fill="#2c7a7b" 
+          fillOpacity={0.3}
+        />
+      </AreaChart>
+    );
+
+    // Add the chart image to PDF
+    doc.addImage(canvas.toDataURL(), 'PNG', 20, currentY + 25, 170, 100);
+    currentY += 140;
+  }
 
   // Yearly data section
   doc.setFontSize(14);
@@ -124,7 +158,7 @@ export const generatePDF = (data: SWPData) => {
     formatRupee(item.inflationAdjustedWithdrawal)
   ]);
 
-  const yearlyDataTableOutput = autoTable(doc, {
+  const yearlyTable = autoTable(doc, {
     startY: currentY + 20,
     head: [['Year', 'Balance', 'Annual Withdrawal', 'Cumulative', 'Inflation Adjusted']],
     body: yearlyDataForTable,
@@ -142,12 +176,9 @@ export const generatePDF = (data: SWPData) => {
       );
     },
   });
-  
-  // Update currentY for the notes section
-  currentY = (yearlyDataTableOutput && typeof yearlyDataTableOutput.previousPageHeight !== 'undefined')
-    ? (yearlyDataTableOutput.finalY ?? currentY + 100)
-    : currentY + 100;
-  
+
+  currentY = yearlyTable?.finalY ?? currentY + 100;
+
   // Notes section
   doc.setFontSize(12);
   doc.text('Notes:', 20, currentY + 15);
